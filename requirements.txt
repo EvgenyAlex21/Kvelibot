@@ -1,2 +1,3 @@
-aiogram>=3.0
-rapidfuzz>=3.0
+aiogram
+rapidfuzz
+python-dotenv
