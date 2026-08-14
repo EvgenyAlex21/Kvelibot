@@ -68,8 +68,8 @@ def find_district(address_str: str) -> str | None:
 
 def get_time_slots() -> list[str]:
     weekday = datetime.now().weekday()
-    if weekday in (4, 5):
-        return ["22:00", "00:00", "01:00"]
+    if weekday in (4, 5): 
+        return ["22:00", "23:00", "00:00", "01:00"]
     return ["22:00", "23:00"]
 
 def get_default_main_time() -> str:
@@ -100,7 +100,9 @@ STREET_HINTS = {
     'королева', 'юго', 'западный', 'волжский', 'ильенко', 'горького', 'маркова',
     'павлова', 'пирогова', 'неон', 'пятилетки', 'б.х', 'бх', 'филипа', 'мичмана', 
     'социалистическая', 'шумилова', 'больничный', 'стрелковая', 'стрелковач', 'дивизия', 
-    'восточная', 'лубумба', 'лумумбы', 'лумумба', 'гражд'
+    'восточная', 'лубумба', 'лумумбы', 'лумумба', 'гражд',
+    'короленко', 'челомей', 'челомея', 'горькова', 'гривова',
+    'ярмарочна', 'презедентский', 'речной', 'ильенко', 'кирпичный'
 }
 
 def parse_person_line(line: str) -> tuple[str | None, str | None]:
@@ -212,13 +214,16 @@ def parse_input(text: str) -> list[dict]:
         norm_line = normalize(line)
 
         is_time = False
-        for pat, tval in time_patterns:
-            if re.search(pat, norm_line) and len(norm_line) < 15:
-                if tval == "23:00" and "01:00" in get_time_slots():
-                    tval = "01:00"
-                current_time = tval
-                is_time = True
-                break
+        pure_time = re.match(
+            r'^(до\s*)?\d{1,2}(:\d{2})?\s*:?\s*$',
+            norm_line
+        )
+        if pure_time:
+            for pat, tval in time_patterns:
+                if re.search(pat, norm_line):
+                    current_time = tval
+                    is_time = True
+                    break
         if is_time:
             continue
 
