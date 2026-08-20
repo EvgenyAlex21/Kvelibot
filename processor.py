@@ -109,7 +109,7 @@ STREET_HINTS = {
     'короленко', 'челомей', 'челомея', 'горькова', 'гривова',
     'ярмарочна', 'презедентский', 'речной', 'ильенко', 'кирпичный',
     'миначева', 'гастелло', 'гостело', 'гайдара', 'пролетарская',
-    'вилка', 'кошевого', 'ефимова', 'ленина', 'мадагаскар'
+    'вилка', 'кошевого', 'ефимова', 'поэта', 'ленина', 'мадагаскар', 'дом', 'мод'
 }
 
 def parse_person_line(line: str) -> tuple[str | None, str | None]:
@@ -249,9 +249,11 @@ def parse_input(text: str) -> list[dict]:
         if role_found:
             current_role = role_found
             line2 = re.sub(
-                r'^.*?(?:клининг|развоз|раннер|ранеры|ранеры|караоке|доставка|кухня|хостес|офики|вип|бар)\s*:?\s*',
-                '', line, flags=re.I, count=1
-            ).strip()
+                r'(?:клининг|развоз|раннер|ранеры|ранеры|караоке|доставка|кухня|хостес|офики|вип|бар)\s*:?\s*',
+                ' ', line, flags=re.I
+            )
+            line2 = re.sub(r'\s+', ' ', line2).strip()
+            line2 = re.sub(r'^[А-Яа-яA-Za-zЁё][А-Яа-яA-Za-zЁё0-9_.]*\s*:\s*', '', line2).strip()
             m = re.search(r'^(?:до|д)[\s.]*(\d{1,2})', line2, re.I)
             if m:
                 h = int(m.group(1))
@@ -355,7 +357,7 @@ def parse_input(text: str) -> list[dict]:
                 continue
             has_digit = bool(re.search(r'\d', address))
             has_street = any(h in addr_norm for h in STREET_HINTS) or any(s in addr_norm for s in SYNONYMS)
-            if not has_digit and not has_street and len(addr_norm) < 8:
+            if not has_digit and not has_street and addr_norm not in ADDRESS_INDEX and len(addr_norm) < 8:
                 continue
 
             inline_t = extract_inline_time(raw_p) or extract_inline_time(address)
@@ -383,14 +385,23 @@ def parse_input(text: str) -> list[dict]:
             if address_clean != address:
                 address = address_clean
 
-            people.append({
-                'name': name,
-                'address': address,
-                'district': district,
-                'role': current_role,
-                'time_group': time_group,
-                'raw': raw_p
-            })
+            n_people = 1
+            m_n = re.search(r'(\d+)\s*чел', normalize(raw_p), re.I)
+            if m_n:
+                n_people = max(1, int(m_n.group(1)))
+
+            for i in range(n_people):
+                entry_name = name
+                if n_people > 1 and not name:
+                    entry_name = None
+                people.append({
+                    'name': entry_name,
+                    'address': address,
+                    'district': district,
+                    'role': current_role,
+                    'time_group': time_group,
+                    'raw': raw_p if i == 0 else raw_p + f' #{i+1}'
+                })
 
     return people
 
