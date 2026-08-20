@@ -33,6 +33,13 @@ def find_district(address_str: str) -> str | None:
         return None
     norm = normalize(address_str)
 
+    if 'кугеси' in norm:
+        return "КУГЕСИ"
+    if any(x in norm for x in ['богдан', 'б.х', 'бх', 'кошкино']):
+        return "БОГДАНКА"
+    if 'советская' in norm and 'кугеси' not in norm:
+        pass
+
     if norm in ADDRESS_INDEX:
         return ADDRESS_INDEX[norm]
 
@@ -54,9 +61,7 @@ def find_district(address_str: str) -> str | None:
     if result:
         return ADDRESS_INDEX[result[0]]
 
-    if any(x in norm for x in ['богдан', 'б.х', 'бх', 'кошкино']):
-        return "БОГДАНКА"
-    if 'кугеси' in norm or 'советская' in norm:
+    if 'советская' in norm:
         return "КУГЕСИ"
     if 'питер' in norm:
         return "СЗР"
@@ -102,7 +107,9 @@ STREET_HINTS = {
     'социалистическая', 'шумилова', 'больничный', 'стрелковая', 'стрелковач', 'дивизия', 
     'восточная', 'лубумба', 'лумумбы', 'лумумба', 'гражд',
     'короленко', 'челомей', 'челомея', 'горькова', 'гривова',
-    'ярмарочна', 'презедентский', 'речной', 'ильенко', 'кирпичный'
+    'ярмарочна', 'презедентский', 'речной', 'ильенко', 'кирпичный',
+    'миначева', 'гастелло', 'гостело', 'гайдара', 'пролетарская',
+    'вилка', 'кошевого', 'ефимова', 'ленина', 'мадагаскар'
 }
 
 def parse_person_line(line: str) -> tuple[str | None, str | None]:
@@ -167,6 +174,13 @@ def extract_inline_time(text: str) -> str | None:
         if h == 1: return "01:00"
         if h == 23: return "23:00"
     m = re.search(r'до\s*(\d{1,2})', text, re.I)
+    if m:
+        h = int(m.group(1))
+        if h == 22: return "22:00"
+        if h == 0: return "00:00"
+        if h == 1: return "01:00"
+        if h == 23: return "23:00"
+    m = re.search(r'\bд[\s.]*(\d{1,2})\b', text, re.I)
     if m:
         h = int(m.group(1))
         if h == 22: return "22:00"
@@ -238,7 +252,7 @@ def parse_input(text: str) -> list[dict]:
                 r'^.*?(?:клининг|развоз|раннер|ранеры|ранеры|караоке|доставка|кухня|хостес|офики|вип|бар)\s*:?\s*',
                 '', line, flags=re.I, count=1
             ).strip()
-            m = re.search(r'^до\s*(\d{1,2})', line2, re.I)
+            m = re.search(r'^(?:до|д)[\s.]*(\d{1,2})', line2, re.I)
             if m:
                 h = int(m.group(1))
                 if h == 22: current_time = "22:00"
@@ -250,8 +264,9 @@ def parse_input(text: str) -> list[dict]:
                 if t_inline:
                     current_time = t_inline
                 else:
-                    current_time = None  
-            line2 = re.sub(r'^до\s*\d{1,2}\s*', '', line2, flags=re.I).strip()
+                    current_time = None
+            line2 = re.sub(r'^(?:до|д)[\s.]*\d{1,2}\s*', '', line2, flags=re.I).strip()
+            line2 = re.sub(r'^[.\s]+', '', line2).strip()
             if not line2 or len(line2) < 3:
                 continue
             line = line2
@@ -352,13 +367,15 @@ def parse_input(text: str) -> list[dict]:
                 time_group = current_time or main_time
 
             address_clean = address
-            address_clean = re.sub(r'\bгражд\b', 'гражданская', address_clean, flags=re.I)
+            address_clean = re.sub(r'\d+\s*чел\.?\s*', '', address_clean, flags=re.I)
+            address_clean = re.sub(r'\bгражд\.?\b', 'гражданская', address_clean, flags=re.I)
             address_clean = re.sub(r'\bлубумб[аыу]?\b', 'лумумбы', address_clean, flags=re.I)
             address_clean = re.sub(r'\b50-лет\b', '50 лет октября', address_clean, flags=re.I)
             address_clean = re.sub(r'\bстрелковач\b', 'стрелковая', address_clean, flags=re.I)
+            address_clean = re.sub(r'\bгостело\b', 'гастелло', address_clean, flags=re.I)
             address_clean = re.sub(r'чебоксары[,\s]*', '', address_clean, flags=re.I).strip()
             address_clean = re.sub(r'\s*\([^)]*(?:чел|своим|факт|скорее)[^)]*\)?\s*', ' ', address_clean, flags=re.I).strip()
-            address_clean = re.sub(r'\s+', ' ', address_clean)
+            address_clean = re.sub(r'\s+', ' ', address_clean).strip(' .')
 
             district = find_district(address_clean)
             if not district and any(x in normalize(address_clean) for x in ['богдан', 'б.х', 'бх']):
